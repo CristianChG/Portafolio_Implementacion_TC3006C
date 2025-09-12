@@ -24,9 +24,13 @@ El dataset se encuentra organizado de la siguiente manera:
 
 Fuente: [Kaggle - Heart Stroke Dataset](https://www.kaggle.com/datasets/madhavtesting/heart-stroke-dataset)
 
+# Introducción
+Elegí un problema relacionado con la salud, ya que es un tema que a la mayoría de las personas debería preocuparnos y ser nuestra prioridad, pero esto no muchas veces es así, por ende me gustaría realizar un modelo para pronosticar este tipo de accidentes. Obviamente, lo recomendado siempre será hacerse un análisis médico y acudir a especialistas de la salud, sin embargo, tomando en cuenta la información como la que nos brinda el dataset podremos conocer que tan probable es que podamos llegar a sufrir un accidente cerebrovascular y tener algún tipo de incidentes de este tipo.
+
+
 ## Objetivo
 
-Teniendo lo anterior en mente utilizaré un modelo de clasificación logística, en este caso binario, donde mi "y" será stroke, lo que representa si tiene probabilidad de que sufra un accidente cerebrovascular y las "x" serán el resto de columnas de mi dataset, aunque no todas, puesto que más adelante por medio de ETL nos quedaremos con los datos más significativo.
+Teniendo lo anterior en mente utilizaré un modelo de clasificación logística y árbol de decisión, donde mi "y" será stroke, lo que representa si tiene probabilidad de que sufra un accidente cerebrovascular y las "x" serán el resto de columnas de mi dataset, aunque no todas, puesto que más adelante por medio de ETL nos quedaremos con los datos más significativo.
 
 ## Procedimiento
 
@@ -71,10 +75,13 @@ Teniendo lo anterior en mente utilizaré un modelo de clasificación logística,
    - Estas variables están en diferentes escalas (ej. edad en años, glucosa en mg/dL, IMC en kg/m²).
    - Normalizarlas garantiza que ninguna domine el cálculo del gradiente descendente por tener valores numéricamente más grandes.
 
-6. **Bias:**  
+6. **Análisis de la matriz de correlación**
+   - Existe cierta multicolinealidad en datos relacionados con la edad que, al utilizar los dummies, llevan a ser redundantes y hasta obvios. Es en el caso de la edad, el trabajo y si alguna vez estuvo  casado, puesto que a los menores de edad no han trabajado ni se han casado, así que estas columnas pueden ser eliminadas porque pueden causar ruido al modelo. Por otro lado, los que tienen son sus empleadores y los que trabajan para empresas privadas tienen una correlación negativa, pero es lógico, ya que los que trabajan en sector privado no son sus propios empleadores y viceversa.
+
+7. **Bias:**  
    Se agregó una columna de 1’s al inicio de la matriz de predictores para representar el sesgo (**bias**) de la regresión logística, permitiendo que la función hipótesis se ajuste de manera más flexible.
 
-7. **Partición de datos:**  
+8. **Partición de datos:**  
    El dataset fue dividido en:  
    - **60% entrenamiento**: para ajustar los pesos del modelo.  
    - **20% validación**: para ajustar hiperparámetros y monitorear el rendimiento durante el entrenamiento.  
@@ -83,7 +90,7 @@ Teniendo lo anterior en mente utilizaré un modelo de clasificación logística,
 
 ---
 
-### Implementación del Modelo
+### Implementación del Modelo 
 1. Se creó la clase **NeuronaLogistica** con las siguientes funciones:  
    - **Función hipótesis (sigmoide):** para mapear las entradas a probabilidades entre 0 y 1.  
    - **Función de costo (cross-entropy):** para medir el error del modelo en términos probabilísticos. Qué tan lejos están las predicciones de los valores reales. 

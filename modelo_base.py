@@ -1,6 +1,7 @@
 # Dataset link: https://www.kaggle.com/datasets/madhavtesting/heart-stroke-dataset
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import math
 
@@ -106,6 +107,27 @@ df = pd.get_dummies(
 # Escalado Z-score
 variables_numericas = ["age", "avg_glucose_level", "bmi"]
 df[variables_numericas] = (df[variables_numericas] - df[variables_numericas].mean()) / df[variables_numericas].std()
+
+# Matriz de correlación 
+corr_matrix = df.corr()
+
+# Valores de la correlación
+print("\nMatriz de correlación:")
+print(corr_matrix)
+
+plt.figure(figsize=(14,12))
+sns.heatmap(corr_matrix, cmap="coolwarm", annot=True, center=0)
+plt.title("Matriz de correlación")
+plt.show()
+
+# Eliminar columnas innecesarias
+columnas_inecesarias = [
+    'work_type_children', # Multicolinealidad con edad
+    'ever_married',    # Multicolinealidad con edad
+    'work_type_Never_worked', # Muy baja correlación
+]
+
+df.drop(columnas_inecesarias, axis=1, inplace=True)
 
 # X, y y bias
 X = df.drop("stroke", axis=1).astype(float).values
