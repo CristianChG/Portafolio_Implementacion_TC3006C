@@ -2,88 +2,16 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.tree import plot_tree
+from etl import cargar_datos
 
-# ETL
-df = pd.read_csv("healthcare-dataset-stroke.csv")
-print(df.describe())
-print("Valores nulos por columna:")
-print(df.isnull().sum())
 
-# Imputación avanzada BMI por género y grupos de edad
-df["age_group"] = pd.cut(df["age"], bins=[0,18,30,40,50,60,70,80,100])
-df["bmi"] = (
-    df.groupby(["gender", "age_group"], observed=True)["bmi"]
-      .transform(lambda x: x.fillna(x.median()))
-)
-df.drop("age_group", axis=1, inplace=True)
+# Cargar datos
+X_train, y_train, X_val, y_val, X_test, y_test = cargar_datos(ruta_csv = 'healthcare-dataset-stroke.csv',analisis=False, bias=False)
 
-# Categóricas a numéricas
-df["gender"] = df["gender"].map({"Male": 1, "Female": 0}).astype("int64")
-df["ever_married"] = df["ever_married"].map({"Yes": 1, "No": 0}).astype("int64")
-df = pd.get_dummies(
-    df,
-    columns=["work_type", "Residence_type", "smoking_status"],
-    drop_first=True,
-    dtype=int
-)
-
-# Escalado Z-score
-variables_numericas = ["age", "avg_glucose_level", "bmi"]
-df[variables_numericas] = (df[variables_numericas] - df[variables_numericas].mean()) / df[variables_numericas].std()
-
-# Matriz de correlación 
-corr_matrix = df.corr()
-
-# Valores de la correlación
-print("\nMatriz de correlación:")
-print(corr_matrix)
-
-plt.figure(figsize=(14,12))
-sns.heatmap(corr_matrix, cmap="coolwarm", annot=True, center=0)
-plt.title("Matriz de correlación")
-plt.show()
-
-# Eliminar columnas innecesarias
-columnas_inecesarias = [
-    'work_type_children', # Multicolinealidad con edad
-    'ever_married',    # Multicolinealidad con edad
-    'work_type_Never_worked', # Muy baja correlación
-]
-
-df.drop(columnas_inecesarias, axis=1, inplace=True)
-# X, y y bias
-X = df.drop("stroke", axis=1).astype(float).values
-y = df["stroke"].astype(int).values
-X = np.c_[np.ones(X.shape[0]), X]  # bias
-
-print("Shape final de X:", X.shape)
-print("Shape final de y:", y.shape)
-print(df.head())
-
-# Partición de datos (60% train, 20% val, 20% test)
-np.random.seed(42)
-indices = np.arange(X.shape[0]); np.random.shuffle(indices)
-X = X[indices]; y = y[indices]
-
-train_size = int(0.6 * len(X))
-val_size = int(0.2 * len(X))
-
-X_train = X[:train_size]
-y_train = y[:train_size]
-X_val   = X[train_size:train_size + val_size]
-y_val   = y[train_size:train_size + val_size]
-X_test  = X[train_size + val_size:]
-y_test  = y[train_size + val_size:]
-
-print("Entrenamiento:", X_train.shape, y_train.shape)
-print("Validación:",   X_val.shape,   y_val.shape)
-print("Prueba:",       X_test.shape,  y_test.shape)
-
-tree = DecisionTreeClassifier(max_depth=19, random_state=42)
+tree = DecisionTreeClassifier(max_depth=15, random_state=42)
 tree.fit(X_train, y_train)
 
 y_pred_train = tree.predict(X_train)
@@ -95,14 +23,59 @@ print("Accuracy Val:", accuracy_score(y_val, y_pred_val))
 y_pred_test = tree.predict(X_test)
 print("Accuracy Test:", accuracy_score(y_test, y_pred_test))
 
+print("F1-Score train:", f1_score(y_train, y_pred_train))
+print("F1-Score val:", f1_score(y_val, y_pred_val))
+print("F1-Score test:", f1_score(y_test, y_pred_test))
 
+# Visualización del árbol
 plt.figure(figsize=(25, 10))  
 plot_tree(
     tree,
-    filled=True,              
-    feature_names=["bias"] + df.drop("stroke", axis=1).columns.tolist(),
+    filled=True,
     class_names=["No Stroke", "Stroke"],
     rounded=True,
     fontsize=8
 )
+plt.show()
+
+param_range = range(1, 16)
+
+train_scores_acc = []
+val_scores_acc = []
+train_scores_f1 = []
+val_scores_f1 = []
+
+# Evaluar diferentes profundidades del árbol
+for depth in param_range:
+    model = DecisionTreeClassifier(max_depth=depth, random_state=42)
+    model.fit(X_train, y_train)
+    
+    # Evaluar en train
+    y_train_pred = model.predict(X_train)
+    train_scores_acc.append(accuracy_score(y_train, y_train_pred))
+    train_scores_f1.append(f1_score(y_train, y_train_pred))
+    
+    # Evaluar en val
+    y_val_pred = model.predict(X_val)
+    val_scores_acc.append(accuracy_score(y_val, y_val_pred))
+    val_scores_f1.append(f1_score(y_val, y_val_pred))
+
+# Gráfica Accuracy
+plt.figure(figsize=(8,5))
+plt.plot(param_range, train_scores_acc, label="Accuracy (Train)")
+plt.plot(param_range, val_scores_acc, label="Accuracy (Val)")
+plt.xlabel("Profundidad máxima del árbol")
+plt.ylabel("Accuracy")
+plt.title("Accuracy vs Profundidad del Árbol")
+plt.legend()
+plt.show()
+
+# Gráfica F1-Score
+plt.figure(figsize=(8,5))
+plt.plot(param_range, train_scores_f1, label="F1-Score (Train)")
+plt.plot(param_range, val_scores_f1, label="F1-Score (Val)")
+plt.xlabel("Profundidad máxima del árbol")
+plt.ylabel("F1-Score")
+plt.title("F1-Score vs Profundidad del Árbol")
+plt.legend()
 plt.show()
